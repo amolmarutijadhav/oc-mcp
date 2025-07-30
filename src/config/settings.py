@@ -4,7 +4,8 @@ Settings configuration for the OpenShift MCP Server.
 This module defines the main configuration classes using Pydantic.
 """
 
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 from typing import Optional
 from enum import Enum
 
@@ -136,11 +137,12 @@ class Settings(BaseSettings):
         description="Enable background cache refresh"
     )
     
-    class Config:
-        """Pydantic configuration."""
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+        "extra": "ignore"
+    }
         
     def get_openai_config(self) -> dict:
         """Get OpenAI configuration as dictionary."""

@@ -112,12 +112,17 @@ Run the test suite:
 
 ```bash
 # Run all tests
-pytest
+make test
+
+# Run specific test categories
+make test-unit         # Unit tests only
+make test-integration  # Integration tests only
+make test-manual       # Manual verification tests
 
 # Run with coverage
 pytest --cov=src
 
-# Run specific test categories
+# Or use pytest directly
 pytest tests/unit/
 pytest tests/integration/
 ```
@@ -142,12 +147,17 @@ oc-mcp/
 │   │   ├── interfaces/           # Abstract base classes
 │   │   ├── implementations/      # Concrete implementations
 │   │   └── mcp_server.py         # Main MCP server
-│   ├── tools/                    # MCP tools
-│   ├── templates/                # Response templates
 │   └── config/                   # Configuration
-├── tests/                        # Test suite
+├── tests/
+│   ├── unit/                     # Unit tests
+│   ├── integration/              # Integration tests
+│   └── manual/                   # Manual verification tests
+├── scripts/                      # Utility scripts
+│   ├── run_server.py            # Server runner
+│   └── setup_environment.py     # Environment setup
 ├── examples/                     # Usage examples
-└── docs/                         # Documentation
+├── Makefile                      # Development tasks
+└── requirements.txt              # Dependencies
 ```
 
 ### Design Patterns

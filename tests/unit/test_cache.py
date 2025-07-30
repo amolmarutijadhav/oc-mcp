@@ -3,6 +3,7 @@ Unit tests for the MVP cache implementation.
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 from datetime import datetime, timedelta
 from src.core.implementations.mvp_cache import MVPCache
@@ -11,7 +12,7 @@ from src.core.implementations.mvp_cache import MVPCache
 class TestMVPCache:
     """Test cases for MVPCache."""
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def cache(self):
         """Create a cache instance for testing."""
         cache = MVPCache(max_size=10, default_ttl=60)
