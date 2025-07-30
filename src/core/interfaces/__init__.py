@@ -1,0 +1,6 @@
+"""
+Abstract interfaces for the OpenShift MCP Server.
+
+This package contains all abstract base classes that define
+the contracts for implementations.
+""" 
