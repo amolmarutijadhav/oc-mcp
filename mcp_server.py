@@ -16,7 +16,7 @@ from mcp.server.fastmcp import FastMCP
 from src.config.settings import Settings
 from src.core.implementations.mvp_cache import MVPCache
 from src.core.implementations.openshift_client import OpenShiftClient
-from src.core.implementations.openai_provider import OpenAIProvider
+from src.core.implementations.llm_provider_factory import create_llm_provider_from_settings
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -38,11 +38,7 @@ client = OpenShiftClient(
     timeout=settings.openshift_timeout
 )
 
-llm_provider = OpenAIProvider(
-    api_key=settings.openai_api_key,
-    model=settings.openai_model,
-    timeout=settings.openai_timeout
-)
+llm_provider = create_llm_provider_from_settings(settings)
 
 logger.info("OpenShift MCP Server initialized")
 
@@ -141,8 +137,10 @@ async def _get_pod_status(pod_name: str, namespace: str = "default") -> str:
         return f"{status_emoji} Pod: {pod.name}\nStatus: {pod.status}\nAge: {pod.age}\nReady: {pod.ready}"
         
     except Exception as e:
-        if "403" in str(e) or "Forbidden" in str(e):
+        if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
             return f"❌ Permission denied: You don't have access to pod '{pod_name}' in namespace '{namespace}'"
+        elif "404" in str(e) or "not found" in str(e).lower():
+            return f"❌ Pod '{pod_name}' not found in namespace '{namespace}'"
         else:
             return f"❌ Error getting pod status: {str(e)}"
 
@@ -162,10 +160,12 @@ async def _list_pods_in_namespace(namespace: str) -> str:
         return result
         
     except Exception as e:
-        if "403" in str(e) or "Forbidden" in str(e):
+        if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
             return f"❌ Permission denied: You don't have access to list pods in namespace '{namespace}'"
+        elif "404" in str(e) or "not found" in str(e).lower():
+            return f"❌ Namespace '{namespace}' not found"
         else:
-            return f"❌ Error listing pods in namespace '{namespace}': Unexpected error: {str(e)}"
+            return f"❌ Error listing pods in namespace '{namespace}': {str(e)}"
 
 
 async def _list_accessible_namespaces() -> str:
@@ -185,11 +185,11 @@ async def _list_accessible_namespaces() -> str:
         return result
         
     except Exception as e:
-        if "403" in str(e) or "Forbidden" in str(e):
+        if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
             return ("❌ Permission denied: You don't have permission to list namespaces.\n"
                    "You can still query specific namespaces you have access to, like 'default'.")
         else:
-            return f"❌ Error listing namespaces: Unexpected error: {str(e)}"
+            return f"❌ Error listing namespaces: {str(e)}"
 
 
 if __name__ == "__main__":

@@ -124,8 +124,16 @@ class OpenShiftClient(IOpenShiftClient):
             return pods
             
         except ApiException as e:
-            logger.error("Failed to list pods", namespace=namespace, error=str(e))
-            raise OpenShiftAPIError(f"Failed to list pods: {e}")
+            # Handle different HTTP status codes appropriately
+            if e.status == 403:
+                logger.error("Permission denied listing pods", namespace=namespace, error=str(e))
+                raise OpenShiftAPIError(f"Permission denied: {e}")
+            elif e.status == 404:
+                logger.error("Namespace not found", namespace=namespace, error=str(e))
+                raise OpenShiftAPIError(f"Namespace '{namespace}' not found: {e}")
+            else:
+                logger.error("Failed to list pods", namespace=namespace, error=str(e))
+                raise OpenShiftAPIError(f"Failed to list pods: {e}")
         except Exception as e:
             logger.error("Unexpected error listing pods", namespace=namespace, error=str(e))
             raise OpenShiftError(f"Unexpected error: {e}")
@@ -393,8 +401,13 @@ class OpenShiftClient(IOpenShiftClient):
             return namespaces
             
         except ApiException as e:
-            logger.error("Failed to list namespaces", error=str(e))
-            raise OpenShiftAPIError(f"Failed to list namespaces: {e}")
+            # Handle different HTTP status codes appropriately
+            if e.status == 403:
+                logger.error("Permission denied listing namespaces", error=str(e))
+                raise OpenShiftAPIError(f"Permission denied: {e}")
+            else:
+                logger.error("Failed to list namespaces", error=str(e))
+                raise OpenShiftAPIError(f"Failed to list namespaces: {e}")
         except Exception as e:
             logger.error("Unexpected error listing namespaces", error=str(e))
             raise OpenShiftError(f"Unexpected error: {e}")

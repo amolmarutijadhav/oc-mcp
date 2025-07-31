@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "openshift-mcp-server": {
+      "command": "python",
+      "args": ["run_mcp_server.py"],
+      "env": {
+        "OPENSHIFT_TOKEN": "${OPENSHIFT_TOKEN}",
+        "OPENSHIFT_URL": "${OPENSHIFT_URL}",
+        "OPENSHIFT_TIMEOUT": "30",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OPENAI_MODEL": "gpt-4",
+        "OPENAI_TIMEOUT": "30",
+        "OPENAI_TEMPERATURE": "0.7",
+        "OPENAI_MAX_TOKENS": "1000",
+        "LLM_PROVIDER_TYPE": "openai",
+        "LLM_BASE_URL": "",
+        "LLM_API_VERSION": "",
+        "LLM_DEPLOYMENT_NAME": "",
+        "LLM_ADDITIONAL_HEADERS": "",
+        "CACHE_TTL": "300",
+        "CACHE_MAX_SIZE": "1000",
+        "CACHE_ENABLE_STALE": "true",
+        "SERVER_TIMEOUT": "30",
+        "SERVER_HOST": "localhost",
+        "SERVER_PORT": "8000",
+        "LOG_LEVEL": "INFO",
+        "LOG_FORMAT": "json",
+        "BACKGROUND_TASK_TIMEOUT": "60",
+        "BACKGROUND_TASK_MAX_CONCURRENT": "10",
+        "QUERY_TIMEOUT": "5",
+        "ENABLE_BACKGROUND_REFRESH": "true"
+      }
+    }
+  }
+} 

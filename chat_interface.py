@@ -171,8 +171,10 @@ async def _get_pod_status(client, pod_name: str, namespace: str = "default") -> 
         return f"{status_emoji} Pod: {pod.name}\nStatus: {pod.status}\nAge: {pod.age}\nReady: {pod.ready}"
         
     except Exception as e:
-        if "403" in str(e) or "Forbidden" in str(e):
+        if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
             return f"❌ Permission denied: You don't have access to pod '{pod_name}' in namespace '{namespace}'"
+        elif "404" in str(e) or "not found" in str(e).lower():
+            return f"❌ Pod '{pod_name}' not found in namespace '{namespace}'"
         else:
             return f"❌ Error getting pod status: {str(e)}"
 
@@ -192,10 +194,12 @@ async def _list_pods_in_namespace(client, namespace: str) -> str:
         return result
         
     except Exception as e:
-        if "403" in str(e) or "Forbidden" in str(e):
+        if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
             return f"❌ Permission denied: You don't have access to list pods in namespace '{namespace}'"
+        elif "404" in str(e) or "not found" in str(e).lower():
+            return f"❌ Namespace '{namespace}' not found"
         else:
-            return f"❌ Error listing pods in namespace '{namespace}': Unexpected error: {str(e)}"
+            return f"❌ Error listing pods in namespace '{namespace}': {str(e)}"
 
 
 async def _list_accessible_namespaces(client) -> str:
@@ -215,11 +219,11 @@ async def _list_accessible_namespaces(client) -> str:
         return result
         
     except Exception as e:
-        if "403" in str(e) or "Forbidden" in str(e):
+        if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
             return ("❌ Permission denied: You don't have permission to list namespaces.\n"
                    "You can still query specific namespaces you have access to, like 'default'.")
         else:
-            return f"❌ Error listing namespaces: Unexpected error: {str(e)}"
+            return f"❌ Error listing namespaces: {str(e)}"
 
 
 if __name__ == "__main__":

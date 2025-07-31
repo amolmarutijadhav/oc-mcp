@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "openshift-mcp-server": {
+      "command": "python",
+      "args": ["run_mcp_server.py"],
+      "env": {
+        "OPENSHIFT_TOKEN": "your_openshift_token_here",
+        "OPENSHIFT_URL": "https://your-cluster.openshift.com:6443",
+        "OPENAI_API_KEY": "your_openai_api_key_here",
+        "OPENAI_MODEL": "gpt-4",
+        "OPENAI_TIMEOUT": "30",
+        "OPENAI_TEMPERATURE": "0.7",
+        "OPENAI_MAX_TOKENS": "1000",
+        "CACHE_TTL": "300",
+        "CACHE_MAX_SIZE": "1000",
+        "SERVER_TIMEOUT": "30",
+        "LOG_LEVEL": "INFO"
+      }
+    }
+  }
+} 

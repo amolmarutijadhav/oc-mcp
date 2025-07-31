@@ -13,7 +13,7 @@ from .interfaces.client import IOpenShiftClient
 from .interfaces.llm import ILLMProvider, LLMRequest
 from .implementations.mvp_cache import MVPCache
 from .implementations.openshift_client import OpenShiftClient
-from .implementations.openai_provider import OpenAIProvider
+from .implementations.llm_provider_factory import create_llm_provider_from_settings
 from ..config.settings import Settings
 
 
@@ -39,11 +39,7 @@ class OpenShiftMCPServer:
             timeout=self.settings.openshift_timeout
         )
         
-        self.llm_provider = OpenAIProvider(
-            api_key=self.settings.openai_api_key,
-            model=self.settings.openai_model,
-            timeout=self.settings.openai_timeout
-        )
+        self.llm_provider = create_llm_provider_from_settings(self.settings)
         
         # MCP server instance
         self.server = Server("openshift-mcp-server")
@@ -174,8 +170,10 @@ class OpenShiftMCPServer:
             return result
             
         except Exception as e:
-            if "403" in str(e) or "Forbidden" in str(e):
+            if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
                 return f"❌ Permission denied: You don't have access to list pods in namespace '{namespace}'"
+            elif "404" in str(e) or "not found" in str(e).lower():
+                return f"❌ Namespace '{namespace}' not found"
             else:
                 return f"❌ Error listing pods in namespace '{namespace}': {str(e)}"
     
@@ -196,7 +194,7 @@ class OpenShiftMCPServer:
             return result
             
         except Exception as e:
-            if "403" in str(e) or "Forbidden" in str(e):
+            if "403" in str(e) or "Forbidden" in str(e) or "Permission denied" in str(e):
                 return ("❌ Permission denied: You don't have permission to list namespaces.\n"
                        "You can still query specific namespaces you have access to, like 'default'.")
             else:
@@ -217,7 +215,16 @@ class OpenShiftMCPServer:
             logger.info("Starting OpenShift MCP Server")
             
             # Start the server using stdio
-            await self.server.run()
+            import sys
+            from mcp import StdioServerParameters
+            
+            params = StdioServerParameters(
+                command=["python", "-m", "src.core.mcp_server"],
+                read_stream=sys.stdin.buffer,
+                write_stream=sys.stdout.buffer
+            )
+            
+            await self.server.run(params)
                 
         except Exception as e:
             logger.error("Failed to start MCP server", error=str(e))

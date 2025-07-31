@@ -1,21 +1,37 @@
 """
-LLM provider interface for the OpenShift MCP Server.
-
-This module defines the abstract interface for LLM provider implementations.
+LLM provider interfaces and types.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Dict, Any, List, Optional
 from enum import Enum
 
 
-class LLMProviderType(Enum):
+class LLMProviderType(str, Enum):
     """Supported LLM provider types."""
     OPENAI = "openai"
+    AZURE_OPENAI = "azure_openai"
+    CUSTOM_OPENAI = "custom_openai"
     ANTHROPIC = "anthropic"
-    OLLAMA = "ollama"
+    GOOGLE = "google"
     CUSTOM = "custom"
+
+
+@dataclass
+class LLMConfig:
+    """Configuration for LLM providers."""
+    provider_type: LLMProviderType
+    api_key: str
+    base_url: Optional[str] = None
+    model: str = "gpt-4"
+    timeout: int = 30
+    temperature: float = 0.7
+    max_tokens: int = 1000
+    api_version: Optional[str] = None
+    deployment_name: Optional[str] = None
+    additional_headers: Optional[Dict[str, str]] = None
+    custom_config: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -37,99 +53,39 @@ class LLMResponse:
     metadata: Optional[Dict[str, Any]] = None
 
 
-@dataclass
-class ToolCall:
-    """Represents a tool call from the LLM."""
-    name: str
-    arguments: Dict[str, Any]
-    call_id: Optional[str] = None
-
-
 class ILLMProvider(ABC):
-    """
-    Abstract interface for LLM providers.
-    
-    This interface defines the contract for LLM provider implementations
-    that can be used by the MCP server to generate responses.
-    """
-    
-    @abstractmethod
-    def get_provider_type(self) -> LLMProviderType:
-        """
-        Get the type of this LLM provider.
-        
-        Returns:
-            The provider type
-        """
-        pass
+    """Abstract interface for LLM providers."""
     
     @abstractmethod
     async def generate_response(self, request: LLMRequest) -> LLMResponse:
-        """
-        Generate a response from the LLM.
-        
-        Args:
-            request: The LLM request
-            
-        Returns:
-            The LLM response
-        """
-        pass
-    
-    @abstractmethod
-    async def generate_tool_response(self, request: LLMRequest, 
-                                   tool_results: List[Dict[str, Any]]) -> LLMResponse:
-        """
-        Generate a response with tool results.
-        
-        Args:
-            request: The original LLM request
-            tool_results: Results from tool executions
-            
-        Returns:
-            The LLM response with tool results
-        """
-        pass
-    
-    @abstractmethod
-    def convert_mcp_tools_to_native(self, mcp_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Convert MCP tools to the native format for this LLM provider.
-        
-        Args:
-            mcp_tools: List of MCP tool definitions
-            
-        Returns:
-            List of tools in native format
-        """
-        pass
-    
-    @abstractmethod
-    def extract_tool_calls(self, response: LLMResponse) -> List[ToolCall]:
-        """
-        Extract tool calls from an LLM response.
-        
-        Args:
-            response: The LLM response
-            
-        Returns:
-            List of tool calls
-        """
+        """Generate a response from the LLM."""
         pass
     
     @abstractmethod
     async def is_available(self) -> bool:
-        """
-        Check if the LLM provider is available.
-        
-        Returns:
-            True if available, False otherwise
-        """
+        """Check if the LLM provider is available."""
+        pass
+    
+    @abstractmethod
+    def get_provider_type(self) -> LLMProviderType:
+        """Get the provider type."""
         pass
     
     @abstractmethod
     async def close(self) -> None:
-        """
-        Close the LLM provider connection.
-        """
+        """Close the provider connection."""
+        pass
+
+
+class ILLMProviderFactory(ABC):
+    """Abstract factory for creating LLM providers."""
+    
+    @abstractmethod
+    def create_provider(self, config: LLMConfig) -> ILLMProvider:
+        """Create an LLM provider instance."""
+        pass
+    
+    @abstractmethod
+    def get_supported_providers(self) -> List[LLMProviderType]:
+        """Get list of supported provider types."""
         pass 
