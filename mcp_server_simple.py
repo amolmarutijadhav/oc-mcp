@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenShift MCP Server Entry Point for FastMCP
-
-This file serves as the main entry point for the MCP CLI to run the OpenShift MCP server.
+Simple MCP server script that imports modules directly.
 """
 
 import asyncio
@@ -11,15 +9,7 @@ import os
 from pathlib import Path
 
 # Add src to path for imports
-import os
-from pathlib import Path
-
-# Add src to path for imports
 sys.path.insert(0, "src")
-
-
-
-
 
 from mcp.server.fastmcp import FastMCP
 from src.config.settings import Settings
@@ -30,7 +20,6 @@ import structlog
 
 # Configure logging to stderr to avoid interfering with MCP stdio protocol
 import logging
-import sys
 
 # Configure structlog to output to stderr instead of stdout
 structlog.configure(

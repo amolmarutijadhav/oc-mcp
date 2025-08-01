@@ -29,7 +29,7 @@ test-query: ## Run query processing tests
 	python tests/manual/test_manual_verification.py query
 
 run: ## Run the MCP server
-	python tools/scripts/run_server.py
+	python mcp_server_simple.py
 
 verify: ## Run full verification
 	python tests/manual/test_manual_verification.py

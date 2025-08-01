@@ -2,7 +2,7 @@
   "mcpServers": {
     "openshift-mcp-server": {
       "command": "python",
-      "args": ["run_mcp_server.py"],
+      "args": ["mcp_server_simple.py"],
       "env": {
         "OPENSHIFT_TOKEN": "your_openshift_token_here",
         "OPENSHIFT_URL": "https://your-cluster.openshift.com:6443",
