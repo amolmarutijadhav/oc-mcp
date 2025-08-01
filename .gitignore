@@ -51,6 +51,10 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Integration test reports (may contain sensitive data)
+integration_test_report_*.json
+test_report_*.json
+
 # Translations
 *.mo
 *.pot
