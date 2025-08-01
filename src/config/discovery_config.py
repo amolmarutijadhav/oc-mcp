@@ -28,7 +28,8 @@ class DiscoveryConfig:
         DiscoveryStrategy.PROJECT_API,
         DiscoveryStrategy.NAMESPACE_API,
         DiscoveryStrategy.RESOURCE_TESTING,
-        DiscoveryStrategy.COMMON_NAMESPACES
+        DiscoveryStrategy.COMMON_NAMESPACES,
+        DiscoveryStrategy.USER_PROJECTS
     ])
     
     # Timeouts and limits

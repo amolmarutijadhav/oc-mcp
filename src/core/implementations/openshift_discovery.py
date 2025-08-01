@@ -59,8 +59,10 @@ class OpenShiftDiscoveryService(IDiscoveryService):
         try:
             # Try to get OpenShift-specific API clients
             if hasattr(self.client, 'api_client'):
-                self.project_v1_api = client.ProjectOpenshiftIoV1Api(self.client.api_client)
-                self.user_v1_api = client.UserOpenshiftIoV1Api(self.client.api_client)
+                # Use OpenShift-specific client instead of kubernetes.client
+                import openshift
+                self.project_v1_api = openshift.client.ProjectOpenshiftIoV1Api(self.client.api_client)
+                self.user_v1_api = openshift.client.UserOpenshiftIoV1Api(self.client.api_client)
                 logger.debug("OpenShift-specific APIs initialized")
             else:
                 self.project_v1_api = None
@@ -70,6 +72,47 @@ class OpenShiftDiscoveryService(IDiscoveryService):
             logger.warning("Failed to initialize OpenShift-specific APIs", error=str(e))
             self.project_v1_api = None
             self.user_v1_api = None
+    
+    async def _discover_via_oc_cli(self) -> List[NamespaceInfo]:
+        """Discover namespaces using oc CLI as fallback."""
+        try:
+            import subprocess
+            import json
+            
+            # Run oc get projects command
+            result = subprocess.run(
+                ['oc', 'get', 'projects', '-o', 'json'],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                projects_data = json.loads(result.stdout)
+                namespaces = []
+                
+                for proj in projects_data.get('items', []):
+                    metadata = proj.get('metadata', {})
+                    name = metadata.get('name', '')
+                    annotations = metadata.get('annotations', {})
+                    
+                    namespace_info = NamespaceInfo(
+                        name=name,
+                        display_name=annotations.get('openshift.io/display-name'),
+                        description=annotations.get('openshift.io/description'),
+                        status=proj.get('status', {}).get('phase')
+                    )
+                    namespaces.append(namespace_info)
+                
+                logger.info("Namespace discovery via oc CLI successful", count=len(namespaces))
+                return namespaces
+            else:
+                logger.warning("oc CLI command failed", error=result.stderr)
+                return []
+                
+        except Exception as e:
+            logger.warning("oc CLI discovery failed", error=str(e))
+            return []
     
     async def discover_namespaces(self) -> List[NamespaceInfo]:
         """
@@ -194,10 +237,12 @@ class OpenShiftDiscoveryService(IDiscoveryService):
             (DiscoveryStrategy.PROJECT_API, self._discover_via_project_api),
             (DiscoveryStrategy.NAMESPACE_API, self._discover_via_namespace_api),
             (DiscoveryStrategy.COMMON_NAMESPACES, self._discover_via_common_namespaces),
+            (DiscoveryStrategy.USER_PROJECTS, self._discover_via_oc_cli),  # Add oc CLI as fallback
         ]
         
         for strategy_enum, strategy_func in strategies:
             if strategy_enum not in self.config.enabled_strategies:
+                logger.debug("Strategy not enabled", strategy=strategy_enum.value)
                 continue
             
             try:
@@ -207,6 +252,8 @@ class OpenShiftDiscoveryService(IDiscoveryService):
                     logger.info("Namespace discovery successful", 
                               strategy=strategy_enum.value, count=len(result))
                     return result
+                else:
+                    logger.debug("Strategy returned no results", strategy=strategy_enum.value)
             except Exception as e:
                 logger.warning("Discovery strategy failed", 
                              strategy=strategy_enum.value, error=str(e))
