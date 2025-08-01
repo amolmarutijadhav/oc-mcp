@@ -3,6 +3,7 @@ OpenAI provider implementation with support for custom URLs and Azure OpenAI.
 """
 
 import asyncio
+import re
 from typing import Dict, Any, List, Optional
 import structlog
 from openai import AsyncOpenAI
@@ -17,6 +18,28 @@ from ..interfaces.llm import (
 )
 
 logger = structlog.get_logger(__name__)
+
+
+def _process_base_url(url: str) -> str:
+    """
+    Process the base URL to ensure it's compatible with OpenAI client.
+    
+    If the URL already contains '/chat/completions', strip it to get the base URL.
+    If it ends with '/v1', keep it as is.
+    If it ends with '/v1/', keep it as is.
+    """
+    if not url:
+        return url
+    
+    # Remove trailing slash if present
+    url = url.rstrip('/')
+    
+    # If URL already contains '/chat/completions', strip it
+    if '/chat/completions' in url:
+        url = url.replace('/chat/completions', '')
+        logger.info("Stripped '/chat/completions' from URL to get base URL", original_url=url)
+    
+    return url
 
 
 class OpenAIProvider(ILLMProvider):
@@ -38,7 +61,7 @@ class OpenAIProvider(ILLMProvider):
             provider_type=config.provider_type.value,
             model=config.model,
             timeout=config.timeout,
-            base_url=config.base_url
+            complete_url=config.base_url
         )
     
     def _setup_openai_client(self):
@@ -50,7 +73,9 @@ class OpenAIProvider(ILLMProvider):
         
         # Use custom base URL if provided
         if self.config.base_url:
-            client_kwargs["base_url"] = self.config.base_url
+            processed_url = _process_base_url(self.config.base_url)
+            client_kwargs["base_url"] = processed_url
+            logger.info("Using processed base URL for OpenAI client", original_url=self.config.base_url, processed_url=processed_url)
         
         # Add custom headers if provided
         if self.config.additional_headers:
@@ -71,7 +96,9 @@ class OpenAIProvider(ILLMProvider):
         
         # Azure OpenAI requires specific base URL format
         if self.config.base_url:
-            client_kwargs["azure_endpoint"] = self.config.base_url
+            processed_url = _process_base_url(self.config.base_url)
+            client_kwargs["azure_endpoint"] = processed_url
+            logger.info("Using processed base URL for Azure OpenAI client", original_url=self.config.base_url, processed_url=processed_url)
         
         # Add custom headers if provided
         if self.config.additional_headers:
@@ -182,7 +209,7 @@ class CustomOpenAIProvider(OpenAIProvider):
         
         logger.info(
             "Custom OpenAI provider initialized",
-            base_url=config.base_url,
+            complete_url=config.base_url,
             model=config.model
         )
     

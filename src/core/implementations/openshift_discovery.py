@@ -241,7 +241,9 @@ class OpenShiftDiscoveryService(IDiscoveryService):
         ]
         
         for strategy_enum, strategy_func in strategies:
-            if strategy_enum not in self.config.enabled_strategies:
+            # Fix: Compare by value instead of object identity
+            enabled_strategy_values = [s.value for s in self.config.enabled_strategies]
+            if strategy_enum.value not in enabled_strategy_values:
                 logger.debug("Strategy not enabled", strategy=strategy_enum.value)
                 continue
             
@@ -264,7 +266,39 @@ class OpenShiftDiscoveryService(IDiscoveryService):
         return []
     
     async def _discover_projects_impl(self) -> List[ProjectInfo]:
-        """Implementation of project discovery."""
+        """Implementation of project discovery using multiple strategies."""
+        strategies = [
+            (DiscoveryStrategy.PROJECT_API, self._discover_via_project_api_direct),
+            (DiscoveryStrategy.USER_PROJECTS, self._discover_via_oc_cli_for_projects),
+        ]
+        
+        for strategy_enum, strategy_func in strategies:
+            # Fix: Compare by value instead of object identity
+            enabled_strategy_values = [s.value for s in self.config.enabled_strategies]
+            if strategy_enum.value not in enabled_strategy_values:
+                logger.debug("Strategy not enabled", strategy=strategy_enum.value)
+                continue
+            
+            try:
+                logger.debug("Trying project discovery strategy", strategy=strategy_enum.value)
+                result = await strategy_func()
+                if result:
+                    logger.info("Project discovery successful", 
+                              strategy=strategy_enum.value, count=len(result))
+                    return result
+                else:
+                    logger.debug("Strategy returned no results", strategy=strategy_enum.value)
+            except Exception as e:
+                logger.warning("Project discovery strategy failed", 
+                             strategy=strategy_enum.value, error=str(e))
+                if self.config.fail_fast:
+                    break
+        
+        logger.warning("All project discovery strategies failed")
+        return []
+    
+    async def _discover_via_project_api_direct(self) -> List[ProjectInfo]:
+        """Discover projects via OpenShift Project API."""
         if not self.project_v1_api:
             logger.debug("OpenShift Project API not available")
             return []
@@ -286,7 +320,6 @@ class OpenShiftDiscoveryService(IDiscoveryService):
                 )
                 projects.append(project_info)
             
-            logger.info("Project discovery successful", count=len(projects))
             return projects
             
         except ApiException as e:
@@ -297,6 +330,47 @@ class OpenShiftDiscoveryService(IDiscoveryService):
             return []
         except Exception as e:
             logger.error("Unexpected error in project discovery", error=str(e))
+            return []
+    
+    async def _discover_via_oc_cli_for_projects(self) -> List[ProjectInfo]:
+        """Discover projects using oc CLI."""
+        try:
+            import subprocess
+            import json
+            
+            # Run oc get projects command
+            result = subprocess.run(
+                ['oc', 'get', 'projects', '-o', 'json'],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                projects_data = json.loads(result.stdout)
+                projects = []
+                
+                for proj in projects_data.get('items', []):
+                    metadata = proj.get('metadata', {})
+                    name = metadata.get('name', '')
+                    annotations = metadata.get('annotations', {})
+                    
+                    project_info = ProjectInfo(
+                        name=name,
+                        display_name=annotations.get('openshift.io/display-name'),
+                        description=annotations.get('openshift.io/description'),
+                        status=proj.get('status', {}).get('phase')
+                    )
+                    projects.append(project_info)
+                
+                logger.info("Project discovery via oc CLI successful", count=len(projects))
+                return projects
+            else:
+                logger.warning("oc CLI command failed", error=result.stderr)
+                return []
+                
+        except Exception as e:
+            logger.warning("oc CLI project discovery failed", error=str(e))
             return []
     
     async def _discover_via_project_api(self) -> List[NamespaceInfo]:

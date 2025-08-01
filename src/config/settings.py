@@ -24,9 +24,10 @@ class Settings(BaseSettings):
     
     # LLM Provider Configuration (NEW)
     llm_provider_type: str = Field("openai", env="LLM_PROVIDER_TYPE")  # openai, azure, custom
-    llm_base_url: Optional[str] = Field(None, env="LLM_BASE_URL")  # Custom base URL
+    llm_base_url: Optional[str] = Field(None, env="LLM_BASE_URL")  # Complete OpenAI API URL (e.g., https://openai-proxy.company.com/v1/chat/completions)
     llm_api_version: Optional[str] = Field(None, env="LLM_API_VERSION")  # API version for Azure
     llm_deployment_name: Optional[str] = Field(None, env="LLM_DEPLOYMENT_NAME")  # Azure deployment name
+    llm_additional_headers: Optional[str] = Field(None, env="LLM_ADDITIONAL_HEADERS")  # Custom headers as JSON string
     
     # Cache Configuration
     cache_ttl: int = Field(300, env="CACHE_TTL")

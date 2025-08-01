@@ -5,7 +5,8 @@ This module provides a factory pattern for creating different LLM providers
 based on configuration, supporting multiple provider types and custom URLs.
 """
 
-from typing import List
+import json
+from typing import List, Dict, Optional
 import structlog
 from ..interfaces.llm import (
     ILLMProvider, 
@@ -18,6 +19,18 @@ from .openai_provider import OpenAIProvider, CustomOpenAIProvider
 logger = structlog.get_logger(__name__)
 
 
+def _parse_additional_headers(headers_str: Optional[str]) -> Optional[Dict[str, str]]:
+    """Parse additional headers from JSON string."""
+    if not headers_str:
+        return None
+    
+    try:
+        return json.loads(headers_str)
+    except json.JSONDecodeError as e:
+        logger.warning("Failed to parse additional headers", error=str(e), headers=headers_str)
+        return None
+
+
 class LLMProviderFactory(ILLMProviderFactory):
     """Factory for creating LLM provider instances."""
     
@@ -27,7 +40,7 @@ class LLMProviderFactory(ILLMProviderFactory):
         logger.info(
             "Creating LLM provider",
             provider_type=config.provider_type.value,
-            base_url=config.base_url
+            complete_url=config.base_url
         )
         
         if config.provider_type == LLMProviderType.OPENAI:
@@ -87,6 +100,9 @@ def create_llm_provider_from_settings(settings) -> ILLMProvider:
     else:
         raise ValueError(f"Unsupported provider type: {provider_type_str}")
     
+    # Parse additional headers
+    additional_headers = _parse_additional_headers(settings.llm_additional_headers)
+    
     # Create configuration
     config = LLMConfig(
         provider_type=provider_type,
@@ -97,7 +113,8 @@ def create_llm_provider_from_settings(settings) -> ILLMProvider:
         temperature=settings.openai_temperature,
         max_tokens=settings.openai_max_tokens,
         api_version=settings.llm_api_version,
-        deployment_name=settings.llm_deployment_name
+        deployment_name=settings.llm_deployment_name,
+        additional_headers=additional_headers
     )
     
     # Create factory and provider

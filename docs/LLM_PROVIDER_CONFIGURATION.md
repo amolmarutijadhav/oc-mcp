@@ -58,13 +58,15 @@ OPENAI_TEMPERATURE=0.7
 OPENAI_MAX_TOKENS=1000
 ```
 
-### Custom Base URL
+### Complete OpenAI API URL
 
 For any provider that supports custom URLs:
 
 ```bash
-# Custom base URL (overrides default OpenAI URL)
-LLM_BASE_URL=https://your-custom-endpoint.com/v1
+# Complete OpenAI API URL (overrides default OpenAI URL)
+# You can specify the URL up to /chat/completions - it will be automatically processed
+LLM_BASE_URL=https://openai-proxy.your-company.com/v1/chat/completions
+LLM_BASE_URL=https://openai-proxy.your-company.com/v1
 ```
 
 ### Azure OpenAI Configuration
@@ -74,7 +76,8 @@ LLM_BASE_URL=https://your-custom-endpoint.com/v1
 LLM_PROVIDER_TYPE=azure_openai
 
 # Azure-specific settings
-LLM_BASE_URL=https://your-resource.openai.azure.com
+LLM_BASE_URL=https://your-resource.openai.azure.com/openai/deployments/chat/completions
+LLM_BASE_URL=https://your-resource.openai.azure.com/openai/deployments
 LLM_API_VERSION=2024-02-15-preview
 LLM_DEPLOYMENT_NAME=your-deployment-name
 ```
@@ -103,7 +106,7 @@ OPENAI_MODEL=gpt-4
 ```bash
 LLM_PROVIDER_TYPE=azure_openai
 OPENAI_API_KEY=your-azure-api-key
-LLM_BASE_URL=https://your-resource.openai.azure.com
+LLM_BASE_URL=https://your-resource.openai.azure.com/openai/deployments/chat/completions
 LLM_API_VERSION=2024-02-15-preview
 LLM_DEPLOYMENT_NAME=gpt-4-deployment
 ```
@@ -133,6 +136,16 @@ LLM_PROVIDER_TYPE=custom_openai
 OPENAI_API_KEY=your-enterprise-key
 LLM_BASE_URL=https://llm.your-company.com/v1
 LLM_ADDITIONAL_HEADERS={"X-API-Version": "2024-01-01", "X-Client-ID": "your-client-id"}
+```
+
+### Example 6: Organizational OpenAI Proxy
+
+```bash
+# Use your organization's OpenAI proxy instead of direct OpenAI API
+LLM_PROVIDER_TYPE=openai
+OPENAI_API_KEY=your-openai-api-key
+LLM_BASE_URL=https://openai-proxy.your-company.com/v1/chat/completions
+LLM_ADDITIONAL_HEADERS={"X-Organization": "your-org-id", "X-Proxy-Auth": "proxy-token"}
 ```
 
 ## Architecture Benefits
@@ -197,7 +210,7 @@ Each provider includes specific error handling:
 1. Update environment variables:
 ```bash
 LLM_PROVIDER_TYPE=azure_openai
-LLM_BASE_URL=https://your-resource.openai.azure.com
+LLM_BASE_URL=https://your-resource.openai.azure.com/openai/deployments/chat/completions
 LLM_API_VERSION=2024-02-15-preview
 LLM_DEPLOYMENT_NAME=your-deployment
 ```
@@ -221,7 +234,7 @@ LLM_BASE_URL=https://your-custom-endpoint.com/v1
 
 1. **Provider not found**: Check `LLM_PROVIDER_TYPE` value
 2. **Authentication failed**: Verify API key and base URL
-3. **Endpoint not found**: Check `LLM_BASE_URL` format
+3. **Endpoint not found**: Check `LLM_BASE_URL` format (can include /chat/completions, will be automatically processed)
 4. **Model not found**: Verify model name for your provider
 
 ### Debug Mode

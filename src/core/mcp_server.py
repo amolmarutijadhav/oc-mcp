@@ -17,7 +17,7 @@ from .implementations.openshift_client import OpenShiftClient
 from .implementations.openshift_discovery import OpenShiftDiscoveryService
 from .implementations.llm_provider_factory import create_llm_provider_from_settings
 from ..config.settings import Settings
-from ..config.discovery_config import create_discovery_config_from_env
+from ..config.discovery_config import create_discovery_config_from_env, DiscoveryConfig
 
 
 logger = structlog.get_logger(__name__)
@@ -43,7 +43,7 @@ class OpenShiftMCPServer:
         )
         
         # Initialize discovery service
-        discovery_config = create_discovery_config_from_env()
+        discovery_config = DiscoveryConfig()  # Use default config instead of env-based
         self.discovery_service = OpenShiftDiscoveryService(self.client, discovery_config)
         
         self.llm_provider = create_llm_provider_from_settings(self.settings)
