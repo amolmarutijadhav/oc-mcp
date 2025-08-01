@@ -401,7 +401,11 @@ class OpenShiftMCPServer:
 
 async def main():
     """Main entry point."""
-    # Configure logging
+    # Configure logging to stderr to avoid interfering with MCP stdio protocol
+    import logging
+    import sys
+    
+    # Configure structlog to output to stderr instead of stdout
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
@@ -413,6 +417,13 @@ async def main():
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
+    )
+    
+    # Configure standard library logging to use stderr
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(message)s',
+        stream=sys.stderr
     )
     
     # Create and start server

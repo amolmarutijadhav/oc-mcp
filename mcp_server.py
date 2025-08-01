@@ -19,6 +19,31 @@ from src.core.implementations.openshift_client import OpenShiftClient
 from src.core.implementations.llm_provider_factory import create_llm_provider_from_settings
 import structlog
 
+# Configure logging to stderr to avoid interfering with MCP stdio protocol
+import logging
+import sys
+
+# Configure structlog to output to stderr instead of stdout
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer()
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
+# Configure standard library logging to use stderr
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s',
+    stream=sys.stderr
+)
+
 logger = structlog.get_logger(__name__)
 
 # Create FastMCP server instance
