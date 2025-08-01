@@ -7,6 +7,7 @@ import asyncio
 import sys
 import os
 from pathlib import Path
+from typing import List
 
 # Add src to path for imports
 sys.path.insert(0, "src")
@@ -16,6 +17,8 @@ from src.config.settings import Settings
 from src.core.implementations.mvp_cache import MVPCache
 from src.core.implementations.openshift_client import OpenShiftClient
 from src.core.implementations.llm_provider_factory import create_llm_provider_from_settings
+from src.core.implementations.openshift_discovery import OpenShiftDiscoveryService
+from src.config.discovery_config import DiscoveryConfig
 import structlog
 
 # Configure logging to stderr to avoid interfering with MCP stdio protocol
@@ -60,6 +63,9 @@ client = OpenShiftClient(
     url=settings.openshift_url,
     timeout=settings.openshift_timeout
 )
+
+# Initialize discovery service for dynamic project discovery
+discovery_service = OpenShiftDiscoveryService(client, DiscoveryConfig())
 
 llm_provider = create_llm_provider_from_settings(settings)
 
@@ -149,7 +155,7 @@ async def _process_query(query: str) -> str:
         result = await _list_accessible_namespaces()
     elif "project" in query_lower and ("access" in query_lower or "have" in query_lower):
         # Handle "what projects do I have access to" queries
-        result = await _list_all_pods_across_projects()
+        result = await _get_projects_access_info()
     else:
         result = ("I can help you with OpenShift queries. Try asking about:\n"
                  "- Pod status: 'What is the status of pod my-pod?'\n"
@@ -181,12 +187,31 @@ async def _get_pod_status(pod_name: str, namespace: str = "default") -> str:
             return f"❌ Error getting pod status: {str(e)}"
 
 
+async def _get_accessible_projects() -> List[str]:
+    """Get list of accessible projects with caching."""
+    cache_key = "accessible_projects"
+    accessible_projects = await cache.get(cache_key)
+    
+    if not accessible_projects:
+        # Discover projects using the discovery service
+        projects = await discovery_service.discover_projects()
+        accessible_projects = [proj.name for proj in projects]
+        
+        # Cache the project list for 5 minutes to avoid repeated API calls
+        await cache.set(cache_key, accessible_projects, 300)
+    
+    return accessible_projects
+
+
 async def _list_all_pods_across_projects() -> str:
     """List all pods across all accessible projects."""
     try:
-        # Get accessible projects (this would need to be implemented in the client)
-        # For now, we'll check the known accessible projects
-        accessible_projects = ["amol-m-jadhav-dev", "openshift-virtualization-os-images"]
+        # Use discovery service to get accessible projects dynamically
+        accessible_projects = await _get_accessible_projects()
+        
+        if not accessible_projects:
+            return "📦 **No accessible projects found** in your OpenShift cluster.\n\nPlease check your permissions and cluster access."
+        
         all_pods = []
         
         for project in accessible_projects:
@@ -196,10 +221,11 @@ async def _list_all_pods_across_projects() -> str:
                     all_pods.extend([(pod, project) for pod in pods])
             except Exception as e:
                 # Skip projects we can't access
+                logger.debug(f"Cannot access pods in project {project}", error=str(e))
                 continue
         
         if not all_pods:
-            return "📦 **No pods are currently running** in your accessible projects.\n\nYour accessible projects:\n- amol-m-jadhav-dev\n- openshift-virtualization-os-images"
+            return f"📦 **No pods are currently running** in your accessible projects.\n\nYour accessible projects:\n" + "\n".join([f"- {project}" for project in accessible_projects])
         
         result = "📦 **Pods across all accessible projects:**\n\n"
         for pod, project in all_pods:
@@ -210,7 +236,29 @@ async def _list_all_pods_across_projects() -> str:
         return result
         
     except Exception as e:
+        logger.error("Error listing all pods", error=str(e))
         return f"❌ Error listing all pods: {str(e)}"
+
+
+async def _get_projects_access_info() -> str:
+    """Get information about accessible projects."""
+    try:
+        accessible_projects = await _get_accessible_projects()
+        
+        if not accessible_projects:
+            return "📁 **No accessible projects found** in your OpenShift cluster.\n\nPlease check your permissions and cluster access."
+        
+        result = f"📁 **You have access to {len(accessible_projects)} project(s):**\n\n"
+        for project in accessible_projects:
+            result += f"  - {project}\n"
+        
+        result += "\n💡 **Tip:** You can query pods in specific projects by saying 'List pods in namespace <project-name>'"
+        
+        return result
+        
+    except Exception as e:
+        logger.error("Error getting projects access info", error=str(e))
+        return f"❌ Error getting projects access info: {str(e)}"
 
 
 async def _list_pods_in_namespace(namespace: str) -> str:
