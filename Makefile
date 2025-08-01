@@ -11,7 +11,7 @@ install: ## Install dependencies
 	pip install -r requirements.txt
 
 setup: ## Set up environment and configuration
-	python scripts/setup_environment.py
+	python tools/scripts/setup_environment.py
 
 test: ## Run all tests
 	python -m pytest tests/ -v
@@ -29,10 +29,13 @@ test-query: ## Run query processing tests
 	python tests/manual/test_manual_verification.py query
 
 run: ## Run the MCP server
-	python scripts/run_server.py
+	python tools/scripts/run_server.py
 
 verify: ## Run full verification
 	python tests/manual/test_manual_verification.py
+
+debug: ## Run debug scripts
+	python tools/debug/test_discovery_config.py
 
 clean: ## Clean up temporary files
 	find . -type f -name "*.pyc" -delete

@@ -48,13 +48,15 @@ A high-performance Model Context Protocol (MCP) server for OpenShift that enable
 
 3. **Set up environment variables**
    ```bash
-   cp .env.example .env
+   cp config/examples/env.example .env
    # Edit .env with your configuration
    ```
 
 4. **Run the server**
    ```bash
-   python -m src.core.mcp_server
+   python tools/scripts/run_mcp_server.py
+   # Or use make:
+   make run
    ```
 
 ## ⚙️ Configuration
@@ -79,6 +81,34 @@ CACHE_MAX_SIZE=1000
 # Server Configuration
 SERVER_TIMEOUT=30
 LOG_LEVEL=INFO
+```
+
+## 📁 Project Structure
+
+```
+oc-mcp/
+├── src/                    # Application source code
+│   ├── core/              # Core business logic
+│   ├── config/            # Configuration management
+│   └── interfaces/        # Abstract interfaces
+├── tests/                 # Test suite
+│   ├── unit/             # Unit tests
+│   ├── integration/      # Integration tests
+│   └── manual/           # Manual verification tests
+├── config/               # Configuration files
+│   ├── examples/         # Example configurations
+│   └── templates/        # Configuration templates
+├── tools/                # Development tools
+│   ├── scripts/          # Production scripts
+│   ├── debug/            # Debug and test scripts
+│   └── utilities/        # Utility tools
+├── docs/                 # Documentation
+├── examples/             # Usage examples
+├── .github/              # CI/CD workflows
+├── README.md
+├── Makefile
+├── requirements.txt
+└── Dockerfile
 ```
 
 ## 🎯 Usage
