@@ -127,16 +127,29 @@ async def _process_query(query: str) -> str:
             result = "Please specify a pod name. You can also specify a namespace like 'pod my-pod in namespace my-namespace'"
     elif "list" in query_lower and "pod" in query_lower:
         # Handle list pods query
-        namespace = "default"
         words = query.split()
+        namespace = None
+        
+        # Check if a specific namespace is mentioned
         for i, word in enumerate(words):
             if word.lower() == "namespace" and i + 1 < len(words):
                 namespace = words[i + 1]
+                break
         
-        result = await _list_pods_in_namespace(namespace)
+        # If asking for "all pods", check all accessible projects
+        if "all" in query_lower:
+            result = await _list_all_pods_across_projects()
+        elif namespace:
+            result = await _list_pods_in_namespace(namespace)
+        else:
+            # Default to checking all projects if no specific namespace mentioned
+            result = await _list_all_pods_across_projects()
     elif "namespace" in query_lower and ("list" in query_lower or "show" in query_lower):
         # Handle list namespaces query
         result = await _list_accessible_namespaces()
+    elif "project" in query_lower and ("access" in query_lower or "have" in query_lower):
+        # Handle "what projects do I have access to" queries
+        result = await _list_all_pods_across_projects()
     else:
         result = ("I can help you with OpenShift queries. Try asking about:\n"
                  "- Pod status: 'What is the status of pod my-pod?'\n"
@@ -166,6 +179,38 @@ async def _get_pod_status(pod_name: str, namespace: str = "default") -> str:
             return f"❌ Pod '{pod_name}' not found in namespace '{namespace}'"
         else:
             return f"❌ Error getting pod status: {str(e)}"
+
+
+async def _list_all_pods_across_projects() -> str:
+    """List all pods across all accessible projects."""
+    try:
+        # Get accessible projects (this would need to be implemented in the client)
+        # For now, we'll check the known accessible projects
+        accessible_projects = ["amol-m-jadhav-dev", "openshift-virtualization-os-images"]
+        all_pods = []
+        
+        for project in accessible_projects:
+            try:
+                pods = await client.list_pods(project)
+                if pods:
+                    all_pods.extend([(pod, project) for pod in pods])
+            except Exception as e:
+                # Skip projects we can't access
+                continue
+        
+        if not all_pods:
+            return "📦 **No pods are currently running** in your accessible projects.\n\nYour accessible projects:\n- amol-m-jadhav-dev\n- openshift-virtualization-os-images"
+        
+        result = "📦 **Pods across all accessible projects:**\n\n"
+        for pod, project in all_pods:
+            status_emoji = "✅" if pod.ready else "⚠️" if pod.status == "Pending" else "❌"
+            result += f"{status_emoji} **{pod.name}** (namespace: {project})\n"
+            result += f"   Status: {pod.status} | Age: {pod.age} | Ready: {pod.ready}\n\n"
+        
+        return result
+        
+    except Exception as e:
+        return f"❌ Error listing all pods: {str(e)}"
 
 
 async def _list_pods_in_namespace(namespace: str) -> str:
